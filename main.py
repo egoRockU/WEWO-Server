@@ -4,14 +4,14 @@ import time
 import threading
 from threading import Lock
 
-import cv2
-import numpy as np
-from ultralytics import YOLO
-from picamera2 import Picamera2
+from utils.open_serial_connections import open_serial_connections
+from utils.object_detection import pi_capture_image, identify_bottle
+from utils.db_queries import insert_collected_bottles
 
 # INITIAL SETUPS
 VENDO_SERIAL = "/dev/ttyACM0"
 FILTER_SERIAL = "/dev/ttyUSB0"
+DATABASE_PATH = "/db/database.db"
 
 app = Flask(__name__)
 
@@ -51,11 +51,8 @@ def serial_send_filter():
 
 def vendo_serial_listen():
     time.sleep(5)
-    try:
-        vendo_ser.open()
-        filter_ser.open()
-    except Exception as e:
-        print(f"Failed to open serial port: {e}")
+
+    if (open_serial_connections(vendo_ser, "Vendo") == False):
         return
    
     while True:
@@ -91,7 +88,6 @@ def vendo_serial_listen():
                 res = "res: " + str(liters) + "\n"
                 filter_ser.write(res.encode())
                 
-                # TODO: save collected bottles on database from data_buffer 
                 large = 0
                 medium = 0
                 small = 0
@@ -102,65 +98,28 @@ def vendo_serial_listen():
                         medium += 1
                     if data == "Small":
                         small += 1
-                
+
+                insert_collected_bottles(small, medium, large, liters) #This is where saving bottles in db happen
                 data_buffer = []
 
+def filter_serial_listen():
+    time.sleep(5)
 
-def capture_image():
-    cap = cv2.VideoCapture(0)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    if (open_serial_connections(filter_ser, "Filter") == False):
+        return
+    # Add listener functions here if necessary
 
-    if cap.isOpened():
-        frame_count = 0
-        while frame_count < 100:
-            ret, frame = cap.read()
-            frame_array = np.array(frame)
-            frame_count += 1
-    else:
-        return None
 
-    cap.release()
-    cv2.destroyAllWindows()
-
-    return frame_array
-
-def pi_capture_image():
-    picam2 = Picamera2()
-    camera_config = picam2.create_still_configuration(
-        main={"size": (640, 640), "format": "RGB888"}, 
-        )
-    picam2.configure(camera_config)
-
-    picam2.start()
-    time.sleep(2)
-    frame = picam2.capture_array()
-    picam2.close()
-    
-    return frame
-
-def identify_bottle(image_array):
-    yolo_model = "models/1.3kSetAug.pt"
-    cls_list = ["Large", "Medium", "Small"]
-
-    model = YOLO(yolo_model)
-
-    results = model(source=image_array, conf=0.7)
-
-    if (len(results[0]) == 0):
-        return None
-
-    result = results[0].boxes.cpu().numpy()
-    print("Result: ", result.cls[0])
-    object_cls = int(result.cls[0])
-
-    return object_cls       
+# this is where object detection functions declare originally
+# remove this comment if it works     
 
 
 if __name__ == '__main__':
     # Start the serial listener thread
-    listener_thread = threading.Thread(target=vendo_serial_listen, daemon=True)
-    listener_thread.start()
+    vendo_listener_thread = threading.Thread(target=vendo_serial_listen, daemon=True)
+    filter_listener_thread = threading.Thread(target=filter_serial_listen, daemon=True)
+    vendo_listener_thread.start()
+    filter_listener_thread.start()
 
     # Run the Flask app
     app.run(threaded=True)
