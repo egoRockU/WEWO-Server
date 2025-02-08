@@ -3,17 +3,19 @@ from serial import Serial
 import time
 import threading
 from threading import Lock
+from flask_apscheduler import APScheduler
 
 from utils.open_serial_connections import open_serial_connections
 from utils.object_detection import pi_capture_image, identify_bottle
-from utils.db_queries import insert_collected_bottles
+from utils.db_queries import insert_collected_bottles, insert_turbidity
 
 # INITIAL SETUPS
 VENDO_SERIAL = "/dev/ttyACM0"
 FILTER_SERIAL = "/dev/ttyUSB0"
-DATABASE_PATH = "/db/database.db"
+# DATABASE_PATH = "/db/database.db"
 
 app = Flask(__name__)
+scheduler = APScheduler()
 
 # VENDO SERIAL CONNECTION
 vendo_ser = Serial()
@@ -44,6 +46,13 @@ def serial_send_filter():
     if filter_ser.is_open:
         print("Sent: " + message)
         filter_ser.write(res.encode())
+        # is_done = False
+        # while not is_done:
+        #     if filter_ser.in_waiting:
+        #         print("here")
+        #         data = filter_ser.readline().decode('utf8').strip()
+        #         print(data)
+        #         is_done = True
     else: 
         print("Sending Failed")
     return render_template('home.html')
@@ -113,6 +122,20 @@ def filter_serial_listen():
 # this is where object detection functions declare originally
 # remove this comment if it works     
 
+def check_water_quality():
+    if filter_ser.is_open:
+        message = "Sent: check water quality\n"
+        filter_ser.write(message.encode())
+        is_done = False
+        while not is_done:
+            if filter_ser.in_waiting:
+                data = filter_ser.readline().decode('utf8').strip()
+                index = data.find("Turbidity:") + len("Turbidity: ")
+                turbidity_value = int(data[index:])
+                insert_turbidity(turbidity_value) # this saves the turbidity to the db
+                is_done = True
+    else:
+        print("Filter Serial is not open")
 
 if __name__ == '__main__':
     # Start the serial listener thread
@@ -120,6 +143,8 @@ if __name__ == '__main__':
     filter_listener_thread = threading.Thread(target=filter_serial_listen, daemon=True)
     vendo_listener_thread.start()
     filter_listener_thread.start()
+    scheduler.add_job(id="Water Checking Scheduled Task", func=check_water_quality, trigger='interval', minutes=1)
+    scheduler.start()
 
     # Run the Flask app
     app.run(threaded=True)
