@@ -10,14 +10,14 @@ from utils.object_detection import pi_capture_image, identify_bottle
 from utils.db_queries import insert_collected_bottles, insert_turbidity, get_pumper_values
 from utils.parse_res import parse_res
 
-from collected.routes import collected
+from endpoint.routes import endpoint
 
 # INITIAL SETUPS
 VENDO_SERIAL = "/dev/ttyACM0"
 FILTER_SERIAL = "/dev/ttyUSB0"
 
 app = Flask(__name__)
-app.register_blueprint(collected)
+app.register_blueprint(endpoint)
 scheduler = APScheduler()
 
 # VENDO SERIAL CONNECTION
