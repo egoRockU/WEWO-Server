@@ -27,3 +27,19 @@ def insert_turbidity(turbidity):
         print("Error Saving Turbidity")
     finally:
         conn.close()
+
+def get_pumper_values():
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        with conn:
+            conn.row_factory = sqlite3.Row
+            curs = conn.cursor()
+            curs.execute("SELECT * FROM PumperValues")
+            rows = curs.fetchall()
+            return rows
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        return "Error: Database Error"
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return "Error: Unexpected Error"

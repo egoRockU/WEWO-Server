@@ -43,7 +43,7 @@ def identify_bottle(image_array):
 
     model = YOLO(yolo_model)
 
-    results = model(source=image_array, conf=0.7)
+    results = model(source=image_array)
 
     if (len(results[0]) == 0):
         return None
