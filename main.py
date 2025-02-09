@@ -10,12 +10,14 @@ from utils.object_detection import pi_capture_image, identify_bottle
 from utils.db_queries import insert_collected_bottles, insert_turbidity, get_pumper_values
 from utils.parse_res import parse_res
 
+from collected.routes import collected
 
 # INITIAL SETUPS
 VENDO_SERIAL = "/dev/ttyACM0"
 FILTER_SERIAL = "/dev/ttyUSB0"
 
 app = Flask(__name__)
+app.register_blueprint(collected)
 scheduler = APScheduler()
 
 # VENDO SERIAL CONNECTION
@@ -50,6 +52,10 @@ def serial_send_filter():
     else: 
         print("Sending Failed")
     return render_template('home.html')
+
+@app.route('/test')
+def test():
+    return 'Hello from WEWO Server'
 
 
 def vendo_serial_listen():
@@ -153,7 +159,6 @@ def check_water_quality():
 
 
 if __name__ == '__main__':
-    # Start the serial listener thread
     vendo_listener_thread = threading.Thread(target=vendo_serial_listen, daemon=True)
     filter_listener_thread = threading.Thread(target=filter_serial_listen, daemon=True)
     vendo_listener_thread.start()
@@ -161,5 +166,4 @@ if __name__ == '__main__':
     scheduler.add_job(id="Water Checking Scheduled Task", func=check_water_quality, trigger='interval', hours=1)
     scheduler.start()
 
-    # Run the Flask app
     app.run(threaded=True)
