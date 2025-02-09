@@ -6,19 +6,14 @@ from threading import Lock
 from flask_apscheduler import APScheduler
 
 from utils.open_serial_connections import open_serial_connections
-#from utils.object_detection import pi_capture_image, identify_bottle
+from utils.object_detection import pi_capture_image, identify_bottle
 from utils.db_queries import insert_collected_bottles, insert_turbidity, get_pumper_values
 from utils.parse_res import parse_res
 
-import cv2
-import numpy as np
-from ultralytics import YOLO
-from picamera2 import Picamera2
 
 # INITIAL SETUPS
 VENDO_SERIAL = "/dev/ttyACM0"
 FILTER_SERIAL = "/dev/ttyUSB0"
-# DATABASE_PATH = "/db/database.db"
 
 app = Flask(__name__)
 scheduler = APScheduler()
@@ -52,13 +47,6 @@ def serial_send_filter():
     if filter_ser.is_open:
         print("Sent: " + message)
         filter_ser.write(res.encode())
-        # is_done = False
-        # while not is_done:
-        #     if filter_ser.in_waiting:
-        #         print("here")
-        #         data = filter_ser.readline().decode('utf8').strip()
-        #         print(data)
-        #         is_done = True
     else: 
         print("Sending Failed")
     return render_template('home.html')
@@ -156,47 +144,13 @@ def filter_serial_listen():
                 insert_turbidity(turbidity_value)
 
 
-# this is where object detection functions declare originally
-# remove this comment if it works     
-
-def pi_capture_image():
-    picam2 = Picamera2()
-    camera_config = picam2.create_still_configuration(
-        main={"size": (640, 640), "format": "RGB888"}, 
-        )
-    picam2.configure(camera_config)
-
-    picam2.start()
-    time.sleep(2)
-    frame = picam2.capture_array()
-    picam2.close()
-    
-    return frame
-
-def identify_bottle(image_array):
-    yolo_model = "models/1.3kSetAug.pt"
-    cls_list = ["Large", "Medium", "Small"]
-
-    model = YOLO(yolo_model)
-
-    results = model(source=image_array)
-
-    if (len(results[0]) == 0):
-        return None
-
-    result = results[0].boxes.cpu().numpy()
-    print("Result: ", result.cls[0])
-    object_cls = int(result.cls[0])
-
-    return object_cls
-
-
 def check_water_quality():
     if filter_ser.is_open:
         message = "Sent: check water quality\n"
         filter_ser.write(message.encode())
     else:
         print("Filter Serial is not open")
+
 
 if __name__ == '__main__':
     # Start the serial listener thread
