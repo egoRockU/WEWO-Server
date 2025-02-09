@@ -8,6 +8,7 @@ from flask_apscheduler import APScheduler
 from utils.open_serial_connections import open_serial_connections
 #from utils.object_detection import pi_capture_image, identify_bottle
 from utils.db_queries import insert_collected_bottles, insert_turbidity, get_pumper_values
+from utils.parse_res import parse_res
 
 import cv2
 import numpy as np
@@ -77,7 +78,7 @@ def vendo_serial_listen():
                 image_arr = pi_capture_image()
                 if image_arr is None:
                     data_buffer.append('Camera did not work properly')
-                    res = "res: " + str(4) + "\n"
+                    res = "class res: " + str(4) + "\n"
                     vendo_ser.write(res.encode())
                     print(data_buffer)
                 else:
@@ -86,7 +87,7 @@ def vendo_serial_listen():
                         print("Not bottle")
                         with buffer_lock:
                             data_buffer.append("Not Bottle")
-                            res = "res: " + str(3) + "\n"
+                            res = "class res: " + str(3) + "\n"
                             print(res)
                             vendo_ser.write(res.encode())
                             print(data_buffer)
@@ -94,13 +95,13 @@ def vendo_serial_listen():
                         print("bottle class: ", bottle_class)
                         with buffer_lock:
                             data_buffer.append(bottle_class)
-                            res = "res: " + str(bottle_class) + "\n"
+                            res = "class res: " + str(bottle_class) + "\n"
                             vendo_ser.write(res.encode())
                             print(data_buffer)
             
             if 'TOTAL LITERS:' in data:
                 liters = int(data.split(':')[-1].strip())
-                res = "res: " + str(liters) + "\n"
+                res = "provide res: " + str(liters) + "\n"
                 filter_ser.write(res.encode())
                 
                 large = 0
@@ -120,7 +121,7 @@ def vendo_serial_listen():
             if isinstance(data, str) and 'req: check pumper values' in data.lower():
                 pumper_values = get_pumper_values()
                 if isinstance(pumper_values, list):
-                    res = f'''res: Large: {pumper_values[2]['value']} | Medium: {pumper_values[1]['value']} | Small: {pumper_values[0]['value']}\n'''
+                    res = f'''pumper values res: Large: {pumper_values[2]['value']} | Medium: {pumper_values[1]['value']} | Small: {pumper_values[0]['value']}\n'''
                     print("Pumper Values has been sent successfully.")
                 else:
                     res = pumper_values
@@ -129,17 +130,8 @@ def vendo_serial_listen():
             if isinstance(data, str) and 'req: check tank 3' in data.lower():
                 with buffer_lock:
                     if filter_ser.is_open:
-                        is_done = False
                         res = "res: Check Water Level\n"
                         filter_ser.write(res.encode())
-                        while not is_done:
-                            if filter_ser.in_waiting:
-                                filter_data = filter_ser.readline().decode('utf8').strip()
-                                index = filter_data.lower().find("res:") + len("res: ")
-                                is_tank3_empty = filter_data[index:]
-                                res = 'res: ' + is_tank3_empty + "\n"
-                                vendo_ser.write(res.encode())
-                                is_done = True
                     else:
                         print("Filter Serial is not Open")
 
@@ -150,10 +142,18 @@ def filter_serial_listen():
     if (open_serial_connections(filter_ser, "Filter") == False):
         return
     
-    # while True:
-    #     if filter_ser.in_waiting:
-    #         data = filter_ser.readline().decode('utf8').strip()
-    #         print(data)
+    while True:
+        if filter_ser.in_waiting:
+            data = filter_ser.readline().decode('utf8').strip()
+
+            if isinstance(data, str) and 'tank 3 status' in data.lower():
+                res = 'tank 3 level res: ' + parse_res(data, 'res:') + "\n"
+                vendo_ser.write(res.encode())
+                print("Tank 3 Has been checked!")
+
+            if isinstance(data, str) and 'water quality status' in data.lower():
+                turbidity_value = int(parse_res(data, "Turbidity:"))
+                insert_turbidity(turbidity_value)
 
 
 # this is where object detection functions declare originally
@@ -195,14 +195,6 @@ def check_water_quality():
     if filter_ser.is_open:
         message = "Sent: check water quality\n"
         filter_ser.write(message.encode())
-        # is_done = False
-        # while not is_done:
-        #     if filter_ser.in_waiting:
-        #         data = filter_ser.readline().decode('utf8').strip()
-        #         index = data.find("Turbidity:") + len("Turbidity: ")
-        #         turbidity_value = int(data[index:])
-        #         insert_turbidity(turbidity_value) # this saves the turbidity to the db
-        #         is_done = True
     else:
         print("Filter Serial is not open")
 
@@ -212,7 +204,7 @@ if __name__ == '__main__':
     filter_listener_thread = threading.Thread(target=filter_serial_listen, daemon=True)
     vendo_listener_thread.start()
     filter_listener_thread.start()
-    scheduler.add_job(id="Water Checking Scheduled Task", func=check_water_quality, trigger='interval', minutes=1)
+    scheduler.add_job(id="Water Checking Scheduled Task", func=check_water_quality, trigger='interval', hours=1)
     scheduler.start()
 
     # Run the Flask app

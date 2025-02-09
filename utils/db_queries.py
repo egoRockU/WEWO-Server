@@ -39,7 +39,7 @@ def get_pumper_values():
             return rows
     except sqlite3.Error as e:
         print(f"Database error: {e}")
-        return "Error: Database Error"
+        return "Pumper Values Error: Database Error"
     except Exception as e:
         print(f"Unexpected error: {e}")
-        return "Error: Unexpected Error"
+        return "Pumper Values Error: Unexpected Error"
