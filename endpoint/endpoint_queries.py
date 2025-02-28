@@ -50,7 +50,7 @@ def update_pumper_values(smallV, smallML, mediumV, mediumML, largeV, largeML):
             cur.execute(query2)
             cur.execute(query3)
             conn.commit()
-            return "Pumper Values Has Been Update Successfully!"
+            return "Pumper Values Has Been Updated Successfully!"
     except sqlite3.Error as e:
         print(f"Database error: {e}")
         return "Pumper Values Error: Database Error"
