@@ -4,6 +4,7 @@ import time
 import threading
 from threading import Lock
 from flask_apscheduler import APScheduler
+import re
 
 from utils.open_serial_connections import open_serial_connections
 from utils.object_detection import pi_capture_image, identify_bottle
@@ -93,9 +94,12 @@ def vendo_serial_listen():
                             vendo_ser.write(res.encode())
                             print(data_buffer)
             
-            if 'TOTAL LITERS:' in data:
-                liters = int(data.split(':')[-1].strip())
-                res = "provide res: " + str(liters) + "\n"
+            if 'TOTAL TIME:' in data:
+                #liters = int(data.split(':')[-1].strip())
+                matches = re.findall(r'\d+', data)
+                total_time = int(matches[0])
+                total_ml = int(matches[1])
+                res = "provide res: " + str(total_time) + "\n"
                 filter_ser.write(res.encode())
                 
                 large = 0
@@ -109,13 +113,13 @@ def vendo_serial_listen():
                     if data == 2:
                         small += 1
 
-                insert_collected_bottles(small, medium, large, liters) #This is where saving bottles in db happen
+                insert_collected_bottles(small, medium, large, total_ml)
                 data_buffer = []
 
             if isinstance(data, str) and 'req: check pumper values' in data.lower():
                 pumper_values = get_pumper_values()
                 if isinstance(pumper_values, list):
-                    res = f'''pumper values res: Large: {pumper_values[2]['value']} | Medium: {pumper_values[1]['value']} | Small: {pumper_values[0]['value']}\n'''
+                    res = f'''pumper values res: LargeV: {pumper_values[2]['value']} | MediumV: {pumper_values[1]['value']} | SmallV: {pumper_values[0]['value']} | LargeML: {pumper_values[2]['ml']} | MediumML: {pumper_values[1]['ml']} | SmallML: {pumper_values[0]['ml']}\n'''
                     print("Pumper Values has been sent successfully.")
                 else:
                     res = pumper_values
