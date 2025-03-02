@@ -16,6 +16,7 @@ from endpoint.routes import endpoint
 # INITIAL SETUPS
 VENDO_SERIAL = "/dev/ttyACM0"
 FILTER_SERIAL = "/dev/ttyUSB0"
+FILTER2_SERIAL = "/dev/ttyUSB1"
 
 app = Flask(__name__)
 app.register_blueprint(endpoint)
@@ -33,9 +34,16 @@ filter_ser.baudrate = 9600
 filter_ser.port = FILTER_SERIAL
 filter_ser.timeout = 1
 
+# FILTER 2 SERIAL CONNECTION
+filter2_ser = Serial()
+filter2_ser.baudrate = 9600
+filter2_ser.port = FILTER2_SERIAL
+filter2_ser.timeout = 1
+
 data_buffer = []
 buffer_lock = Lock()
 
+filter2_available = False
 
 @app.route('/')
 def hello_world():
@@ -45,13 +53,19 @@ def hello_world():
 def serial_send_filter():
     data = request.form
     message = data['message']
-    print(message)
     res = "res: " + message + "\n"
-    if filter_ser.is_open:
-        print("Sent: " + message)
-        filter_ser.write(res.encode())
-    else: 
-        print("Sending Failed")
+    if (filter2_available):
+        if filter2_ser.is_open:
+            print("Sent to filter2: " + message)
+            filter2_ser.write(res.encode())
+        else: 
+            print("Sending Failed")
+    else:
+        if filter_ser.is_open:
+            print("Sent to filter: " + message)
+            filter_ser.write(res.encode())
+        else: 
+            print("Sending Failed")
     return render_template('home.html')
 
 @app.route('/test')
@@ -153,11 +167,32 @@ def filter_serial_listen():
                 turbidity_value = int(parse_res(data, "Turbidity:"))
                 insert_turbidity(turbidity_value)
 
+def filter2_serial_listen():
+    global filter2_available
+    time.sleep(5)
+
+    if (open_serial_connections(filter2_ser, "Filter2") == False):
+        return
+    
+    filter2_available = True
+    print("Filter 2 is available!")
+
+    while True:
+        if filter2_ser.in_waiting:
+            data = filter2_ser.readline().decode('utf8').strip()
+
+            if isinstance(data, str) and 'water quality status' in data.lower():
+                turbidity_value = int(parse_res(data, "Turbidity:"))
+                insert_turbidity(turbidity_value)
+    
 
 def check_water_quality():
     if filter_ser.is_open:
         message = "Sent: check water quality\n"
-        filter_ser.write(message.encode())
+        if (filter2_available):
+            filter2_ser.write(message.encode())
+        else:
+            filter_ser.write(message.encode())
     else:
         print("Filter Serial is not open")
 
@@ -165,8 +200,10 @@ def check_water_quality():
 if __name__ == '__main__':
     vendo_listener_thread = threading.Thread(target=vendo_serial_listen, daemon=True)
     filter_listener_thread = threading.Thread(target=filter_serial_listen, daemon=True)
+    filter2_listener_thread = threading.Thread(target=filter2_serial_listen, daemon=True)
     vendo_listener_thread.start()
     filter_listener_thread.start()
+    filter2_listener_thread.start()
     scheduler.add_job(id="Water Checking Scheduled Task", func=check_water_quality, trigger='interval', hours=1)
     scheduler.start()
 
