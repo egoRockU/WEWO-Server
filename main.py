@@ -10,6 +10,7 @@ from utils.open_serial_connections import open_serial_connections
 from utils.object_detection import pi_capture_image, identify_bottle
 from utils.db_queries import insert_collected_bottles, insert_turbidity, get_pumper_values
 from utils.parse_res import parse_res
+from utils.send import send_water_lvl
 
 from endpoint.routes import endpoint
 
@@ -159,13 +160,16 @@ def filter_serial_listen():
             data = filter_ser.readline().decode('utf8').strip()
 
             if isinstance(data, str) and 'tank 3 status' in data.lower():
-                res = 'tank 3 level res: ' + parse_res(data, 'res:') + "\n"
+                res_value = parse_res(data, 'res:')
+                res = 'tank 3 level res: ' + res_value + "\n"
                 vendo_ser.write(res.encode())
+                send_water_lvl(res_value)
                 print("Tank 3 Has been checked!")
 
             if isinstance(data, str) and 'water quality status' in data.lower():
                 turbidity_value = int(parse_res(data, "Turbidity:"))
                 insert_turbidity(turbidity_value)
+
 
 def filter2_serial_listen():
     global filter2_available
