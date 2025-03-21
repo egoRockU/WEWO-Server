@@ -36,15 +36,14 @@ Ensure you have the following installed:
 > Due to some libraries not installing properly on Rapsberry Pi OS, we opt to install libraries as system-wide Python packages. However, if you use other OS, pip might be enough to install all required libraries. 
 > Bellow are the following instructions for how we actually installed dependency.
 
-    ```bash 
-    sudo apt install python3-flask python3-numpy python3-ultralytics python3-picamera2 python3-pyserial python3-requests
+    ```bash sudo apt install python3-flask python3-numpy python3-ultralytics python3-picamera2 python3-pyserial python3-requests
     ```
 
 4. Start development server:
 
     ```bash 
-    python3 main.py`
-    ``
+    python3 main.py
+    ```
 
 ### Deployment
 
