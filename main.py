@@ -208,7 +208,5 @@ if __name__ == '__main__':
     vendo_listener_thread.start()
     filter_listener_thread.start()
     filter2_listener_thread.start()
-    scheduler.add_job(id="Water Checking Scheduled Task", func=check_water_quality, trigger='interval', hours=1)
-    scheduler.start()
 
     app.run(threaded=True)
