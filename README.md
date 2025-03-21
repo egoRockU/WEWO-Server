@@ -25,6 +25,7 @@ Ensure you have the following installed:
 > Bellow are the following instructions for how we actually installed dependency.
 
 ```sudo apt install python3-flask python3-numpy python3-ultralytics python3-picamera2 python3-pyserial python3-requests```
+
 4. Start development server:
 ```python3 main.py```
 
