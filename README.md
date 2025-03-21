@@ -14,20 +14,37 @@ Ensure you have the following installed:
 #### Installation
 
 1. Clone the repository:
-```git clone https://github.com/egoRockU/WEWO-Server```
+
+    ```bash
+    git clone https://github.com/egoRockU/WEWO-Server
+    ```
+
 2. Setup python virtual environment:
-```python3 -m venv env```
-```source env/bin/activate```
+
+    ```bash
+    python3 -m venv env
+    source env/bin/activate
+    ```
+
 3. Install dependencies:
-```pip install flask numpy ultralytics picamera2 pyserial requests```
+
+    ```bash
+    pip install flask numpy ultralytics picamera2 pyserial requests
+    ```
+
 > [!WARNING]
 > Due to some libraries not installing properly on Rapsberry Pi OS, we opt to install libraries as system-wide Python packages. However, if you use other OS, pip might be enough to install all required libraries. 
 > Bellow are the following instructions for how we actually installed dependency.
 
-```sudo apt install python3-flask python3-numpy python3-ultralytics python3-picamera2 python3-pyserial python3-requests```
+    ```bash 
+    sudo apt install python3-flask python3-numpy python3-ultralytics python3-picamera2 python3-pyserial python3-requests
+    ```
 
 4. Start development server:
-```python3 main.py```
+
+    ```bash 
+    python3 main.py`
+    ``
 
 ### Deployment
 
