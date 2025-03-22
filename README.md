@@ -47,7 +47,7 @@ Ensure you have the following installed:
 
 ### Deployment
 
-In order for website to access the API endpoints you have to somehow expose the server to the internet.
+In order for the wewo website to access the API endpoints you have to somehow expose the server to the internet.
 You can do this using the following options:
 - [Port Forwarding](https://en.wikipedia.org/wiki/Port_forwarding)
 - [Network Tunneling](https://www.cloudflare.com/learning/network-layer/what-is-tunneling/)
